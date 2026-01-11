@@ -3,15 +3,29 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:drop": "drizzle-kit drop",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.8"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
     "@t3-oss/env-core": "^0.13.10",
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.11.3",
+    "ioredis": "^5.9.1",
+    "nanoid": "^5.1.6",
+    "postgres": "^3.4.8",
     "zod": "^4.3.5"
   }
 }
