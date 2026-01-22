@@ -1,5 +1,5 @@
+import { env } from "common/config/env";
 import Redis from "ioredis";
-import { env } from "src/common/config/env";
 
 const redis = new Redis(env.REDIS_URL);
 

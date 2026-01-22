@@ -3,39 +3,24 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 export type Failure = {
   path?: PropertyKey[];
   message: string;
-  code?: string;
 };
 
 export default class ErrorFactory {
   private readonly _errors: readonly Failure[];
-  private readonly _status: ContentfulStatusCode;
 
   // Set a default status (400) so the constructor is always satisfied
-  private constructor(errors: Failure[], status: ContentfulStatusCode = 400) {
+  private constructor(errors: Failure[]) {
     this._errors = Object.freeze(errors);
-    this._status = status;
   }
 
   /** Static helper to initialize from an array */
-  static from(
-    errors: Failure[],
-    status: ContentfulStatusCode = 400
-  ): ErrorFactory {
-    return new ErrorFactory(errors, status);
+  static from(errors: Failure[]): ErrorFactory {
+    return new ErrorFactory(errors);
   }
 
   /** Helper to create a factory from a single error */
-  static single(
-    message: string,
-    path?: PropertyKey[],
-    code?: string,
-    status: ContentfulStatusCode = 400 // Added status here
-  ): ErrorFactory {
-    return new ErrorFactory([{ message, path, code }], status);
-  }
-
-  get status(): ContentfulStatusCode {
-    return this._status;
+  static single(message: string, path?: PropertyKey[]): ErrorFactory {
+    return new ErrorFactory([{ message, path }]);
   }
 
   get errors(): readonly Failure[] {
