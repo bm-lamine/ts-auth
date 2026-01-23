@@ -1,17 +1,19 @@
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { schema } from "common/db";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 
-export default class UsersSchema {
-  static selectOne = createSelectSchema(schema.users, {
-    id: z.nanoid(),
-    email: z.email(),
-  });
+export const selectUserSchema = createSelectSchema(schema.users, {
+  id: z.nanoid(),
+  email: z.email(),
+});
 
-  static createOne = createInsertSchema(schema.users, {
-    email: z.email(),
-  });
-}
+export const createUserSchema = createInsertSchema(schema.users, {
+  email: z.email(),
+});
 
-export type User = z.infer<typeof UsersSchema.selectOne>;
-export type CreateUser = z.infer<typeof UsersSchema.createOne>;
+export const userJsonSchema = createSelectSchema(schema.users)
+  .omit({ hash: true })
+  .transform((u) => u);
+
+export type User = z.infer<typeof selectUserSchema>;
+export type CreateUserSchema = z.infer<typeof createUserSchema>;
