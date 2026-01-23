@@ -9,6 +9,7 @@ export const users = auth.table(
     id: c.varchar().primaryKey().$defaultFn(nanoid),
     email: c.varchar().notNull().unique(),
     hash: c.varchar().notNull(),
+    email_verified: c.boolean().notNull().default(false),
   }),
   (t) => [index("usr_email_idx").on(t.email)],
 );

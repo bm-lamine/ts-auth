@@ -8,9 +8,16 @@ import { Hono } from "hono";
 import ErrorFactory from "lib/error-factory";
 import { STATUS_CODE } from "lib/status-code";
 import { jwtGuard } from "./auth.guard";
-import { refreshSchema, signInSchema, signUpSchema } from "./auth.schema";
+import {
+  refreshJson,
+  resendVerification,
+  signInJson,
+  signUpJson,
+  verificationQuery,
+} from "./auth.schema";
 import {
   authenticate,
+  createOtp,
   hashText,
   logout,
   refreshAuth,
@@ -18,7 +25,7 @@ import {
 } from "./auth.service";
 
 const authRouter = new Hono()
-  .post("/sign-up", parser("json", signUpSchema), async (ctx) => {
+  .post("/sign-up", parser("json", signUpJson), async (ctx) => {
     const json = ctx.req.valid("json");
     const existingUser = await findUserByEmail(json.email);
 
@@ -41,12 +48,19 @@ const authRouter = new Hono()
       );
     }
 
+    const otp = await createOtp({
+      email: createdUser.email,
+      type: "email-verification",
+    });
+
+    console.log(`current otp for ${createdUser.email} is: ${otp}`);
+
     return ctx.json({
       user: userToJSON(createdUser),
-      message: "operation success, user signed up",
+      message: "operation success, user signed up & check your inbox",
     });
   })
-  .post("/sign-in", parser("json", signInSchema), async (ctx) => {
+  .post("/sign-in", parser("json", signInJson), async (ctx) => {
     const json = ctx.req.valid("json");
     const existingUser = await findUserByEmail(json.email);
 
@@ -60,22 +74,43 @@ const authRouter = new Hono()
       );
     }
 
+    if (!existingUser.email_verified) {
+      const otp = await createOtp({
+        email: existingUser.email,
+        type: "email-verification",
+      });
+
+      console.log(`current otp for ${existingUser.email} is: ${otp}`);
+    }
+
     return ctx.json({
       tokens: await authenticate(existingUser.id),
       user: userToJSON(existingUser),
-      message: "operation success, user singed in",
+      note: existingUser.email_verified
+        ? "operation success, user singed in"
+        : "email not verified, please check yout inbox",
     });
   })
-  .post("/refresh", parser("json", refreshSchema), async (ctx) => {
+  .post("/refresh", parser("json", refreshJson), async (ctx) => {
     const json = ctx.req.valid("json");
     const { accessToken, refreshToken } = await refreshAuth(json.refreshToken);
     return ctx.json({ accessToken, refreshToken });
   })
-  .post("/sign-out", jwtGuard, parser("json", refreshSchema), async (ctx) => {
+  .post("/sign-out", jwtGuard, parser("json", refreshJson), async (ctx) => {
     const json = ctx.req.valid("json");
     const payload = ctx.get("jwtPayload");
     await logout(payload.userId, json.refreshToken);
     return ctx.json({ success: true });
   });
+
+authRouter
+  .post("/verify-email", parser("query", verificationQuery), async (ctx) => {
+    const query = ctx.req.valid("query");
+  })
+  .post(
+    "/resend-verification",
+    parser("query", resendVerification),
+    async (ctx) => {},
+  );
 
 export default authRouter;

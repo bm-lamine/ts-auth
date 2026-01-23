@@ -4,12 +4,20 @@ import crypto from "crypto";
 import { HTTPException } from "hono/http-exception";
 import { sign, verify } from "hono/jwt";
 import { STATUS_CODE } from "lib/status-code";
-import { jwtPayloadSchema, type JwtPayload } from "./auth.schema";
+import { nanoid } from "nanoid";
+import {
+  jwtPayloadJson,
+  type JwtPayload,
+  type VerificationEnum,
+} from "./auth.schema";
 
 export const ACCESS_TTL = 5 * 60;
 export const REFRESH_TTL = 7 * 24 * 60 * 60;
+export const VERIFICATION_TTL = 10 * 60;
 
 export const USER_SID = (userId: string) => `auth:sid:${userId}`;
+export const VERIFICATION_KEY = (email: string, type: VerificationEnum) =>
+  `auth:otp:${type}:${email}`;
 
 export const hashText = async (plain: string) =>
   await Bun.password.hash(plain, "bcrypt");
@@ -28,7 +36,7 @@ export async function signJwt(payload: JwtPayload, ttl: number) {
 export async function verifyJwt(token: string) {
   try {
     const payload = await verify(token, env.JWT_SECRET);
-    const parsed = jwtPayloadSchema.safeParse(payload);
+    const parsed = jwtPayloadJson.safeParse(payload);
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -37,8 +45,8 @@ export async function verifyJwt(token: string) {
 
 export async function issueToken(userId: string) {
   return await Promise.all([
-    signJwt({ userId }, ACCESS_TTL),
-    signJwt({ userId }, REFRESH_TTL),
+    signJwt({ jti: nanoid(), userId }, ACCESS_TTL),
+    signJwt({ jti: nanoid(), userId }, REFRESH_TTL),
   ]);
 }
 
@@ -93,3 +101,33 @@ export async function logout(userId: string, token: string) {
     });
   }
 }
+
+export async function createOtp({ email, type }: CreateOtpOpts) {
+  const otp = nanoid(env.OTP_SIZE);
+
+  await redis
+    .multi()
+    .set(VERIFICATION_KEY(email, type), hashToken(otp))
+    .expire(VERIFICATION_KEY(email, type), VERIFICATION_TTL)
+    .exec();
+
+  return otp;
+}
+
+export async function verifyOtp({ email, otp, type }: VerifyOtpOpts) {
+  const stored = await redis.get(VERIFICATION_KEY(email, type));
+  const valid = Boolean(!stored || stored !== hashToken(otp));
+  if (valid) await redis.del(VERIFICATION_KEY(email, type));
+  return valid;
+}
+
+export type CreateOtpOpts = {
+  email: string;
+  type: VerificationEnum;
+};
+
+export type VerifyOtpOpts = {
+  email: string;
+  otp: string;
+  type: VerificationEnum;
+};

@@ -5,6 +5,7 @@ import {
   selectUserSchema,
   userJsonSchema,
   type CreateUserSchema,
+  type UpdateUserSchema,
   type User,
 } from "./users.schema";
 
@@ -39,6 +40,24 @@ export async function createUser(data: CreateUserSchema) {
   const [created] = await db.insert(schema.users).values(data).returning();
   if (created) cacheUser(created);
   return created;
+}
+
+export async function updateUser(userId: string, data: UpdateUserSchema) {
+  const [updated] = await db
+    .update(schema.users)
+    .set(data)
+    .where(eq(schema.users.id, userId))
+    .returning();
+  if (updated) cacheUser(updated);
+  return updated;
+}
+
+export async function invalidateCache(user: User) {
+  await Promise.all([
+    redis.del(USERS_KEY),
+    redis.del(USER_EMAIL(user.email)),
+    redis.del(USER_ID(user.id)),
+  ]);
 }
 
 export async function cacheUser(data: User) {

@@ -10,6 +10,7 @@ export const env = createEnv({
     DATABASE_URL: z.url(),
     REDIS_URL: z.url(),
     JWT_SECRET: z.string(),
+    OTP_SIZE: z.coerce.number().default(6),
   },
 
   /**
