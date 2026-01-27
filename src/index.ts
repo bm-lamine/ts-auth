@@ -1,4 +1,4 @@
-import authRouter from "app/auth/auth.router";
+import authRouter from "app/routers/auth.router";
 import { env } from "common/config/env";
 import { Hono } from "hono";
 import { etag } from "hono/etag";
