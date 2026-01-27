@@ -1,5 +1,3 @@
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-
 export type Failure = {
   path?: PropertyKey[];
   message: string;

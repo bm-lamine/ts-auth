@@ -1,16 +1,19 @@
 import jwtMiddleware from "app/middlewares/jwt.middleware";
+import { AccountModel } from "app/models/account.model";
 import { AuthModel, type TPayload } from "app/models/auth.model";
 import { MagicLinkModel } from "app/models/magic-link.model";
+import { AccountService } from "app/services/account.service";
 import { JwtService } from "app/services/jwt.service";
 import { MagicLinkService } from "app/services/magic-link.service";
 import { UserService } from "app/services/user.service";
-import { env } from "common/config/env";
 import parser from "common/utils/parser";
 import { Hono } from "hono";
 import type { JwtVariables } from "hono/jwt";
+import { isProd } from "lib/constants";
+import ErrorFactory from "lib/error-factory";
+import { STATUS_CODE } from "lib/status-code";
 
-const authRouter = new Hono();
-const isProd = env.NODE_ENV === "production";
+export const authRouter = new Hono();
 
 authRouter.route(
   "/magic-link",
@@ -32,16 +35,13 @@ authRouter.route(
       "/callback",
       parser("query", MagicLinkModel.callbackQuery),
       async (ctx) => {
-        const query = ctx.req.valid("query");
-        const email = await MagicLinkService.consume({
-          token: query.token,
-          userAgent: ctx.req.header("User-Agent") ?? "unknown",
-        });
+        const { token } = ctx.req.valid("query");
+        const userAgent = ctx.req.header("User-Agent") ?? "unknown";
 
-        const user = await UserService.findOrCreate({ email });
+        const email = await MagicLinkService.consume({ token, userAgent });
+        const user = await UserService.findOrCreate({ email, userAgent });
 
         return ctx.json({
-          user: UserService.toJSON(user),
           tokens: await JwtService.authenticate(user.id),
           message: "user created successfully",
         });
@@ -71,4 +71,68 @@ authRouter.route(
     ),
 );
 
-export default authRouter;
+authRouter.route(
+  "/account",
+  new Hono<{ Variables: JwtVariables<TPayload> }>()
+    .post(
+      "/",
+      jwtMiddleware,
+      parser("json", AccountModel.insert.omit({ userId: true })),
+      async (ctx) => {
+        const json = ctx.req.valid("json");
+        const payload = ctx.get("jwtPayload");
+        const account = await AccountService.findByUsername(json.username);
+
+        if (account) {
+          return ctx.json(
+            ErrorFactory.single("username already used", ["username"]),
+            STATUS_CODE.UNPROCESSABLE_ENTITY,
+          );
+        }
+
+        const newAccount = await AccountService.create({
+          userId: payload.sub,
+          username: json.username,
+        });
+
+        return ctx.json({
+          account: AccountService.toResponse(newAccount),
+          message: "account created successfully",
+        });
+      },
+    )
+    .patch(
+      "/",
+      jwtMiddleware,
+      parser("json", AccountModel.update),
+      async (ctx) => {
+        const json = ctx.req.valid("json");
+        const payload = ctx.get("jwtPayload");
+
+        const account = await AccountService.findByUserId(payload.sub);
+        if (!account) {
+          return ctx.json(
+            ErrorFactory.single("account not found, please create one"),
+            STATUS_CODE.NOT_FOUND,
+          );
+        }
+
+        if (
+          json.username &&
+          (await AccountService.findByUsername(json.username))
+        ) {
+          return ctx.json(
+            ErrorFactory.single("username already used", ["username"]),
+            STATUS_CODE.UNPROCESSABLE_ENTITY,
+          );
+        }
+
+        const updated = await AccountService.update(payload.sub, json);
+
+        return ctx.json({
+          account: AccountService.toResponse(updated),
+          message: "account updated successfully",
+        });
+      },
+    ),
+);

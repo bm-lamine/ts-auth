@@ -1,4 +1,4 @@
-import { UserModel, type TInsertUser, type TUser } from "app/models/user.model";
+import { type TInsertUser } from "app/models/user.model";
 import { db, schema } from "common/db";
 import { INTERNAL_SERVER_ERROR } from "common/utils/errors";
 
@@ -9,14 +9,10 @@ export namespace UserService {
     const [user] = await db
       .insert(schema.users)
       .values(values)
-      .onConflictDoNothing()
+      .onConflictDoUpdate({ target: schema.users.email, set: values })
       .returning();
 
     if (!user) throw new INTERNAL_SERVER_ERROR();
     return user;
-  }
-
-  export function toJSON(user: TUser) {
-    return UserModel.json.parse(user);
   }
 }

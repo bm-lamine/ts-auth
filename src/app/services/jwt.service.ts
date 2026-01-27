@@ -1,7 +1,7 @@
 import type { TPayload } from "app/models/auth.model";
 import { AuthModel } from "app/models/auth.model";
 import { env } from "common/config/env";
-import Cache from "common/utils/cache";
+import { Cache } from "common/utils/cache";
 import { HTTPException } from "hono/http-exception";
 import { sign, verify } from "hono/jwt";
 import { STATUS_CODE } from "lib/status-code";
@@ -31,7 +31,7 @@ export namespace JwtService {
     const accessToken = await signToken({ sub: userId }, ACCESS_TTL);
     const refreshToken = await signToken({ sub: userId }, REFRESH_TTL);
 
-    await Cache.client
+    await Cache.redis
       .multi()
       .sadd(USER_SID(userId), HashService.hashToken(refreshToken))
       .expire(USER_SID(userId), REFRESH_TTL, "NX")
@@ -48,7 +48,7 @@ export namespace JwtService {
       });
     }
 
-    const exists = await Cache.client.sismember(
+    const exists = await Cache.redis.sismember(
       USER_SID(payload.sub),
       HashService.hashToken(token),
     );
@@ -62,7 +62,7 @@ export namespace JwtService {
     const accessToken = await signToken({ sub: payload.sub }, ACCESS_TTL);
     const refreshToken = await signToken({ sub: payload.sub }, REFRESH_TTL);
 
-    await Cache.client
+    await Cache.redis
       .multi()
       .srem(USER_SID(payload.sub), HashService.hashToken(token))
       .sadd(USER_SID(payload.sub), HashService.hashToken(refreshToken))
@@ -74,7 +74,7 @@ export namespace JwtService {
 
   export async function revoke(userId: string, token?: string) {
     if (token)
-      await Cache.client.srem(USER_SID(userId), HashService.hashToken(token));
-    else await Cache.client.del(USER_SID(userId));
+      await Cache.redis.srem(USER_SID(userId), HashService.hashToken(token));
+    else await Cache.redis.del(USER_SID(userId));
   }
 }

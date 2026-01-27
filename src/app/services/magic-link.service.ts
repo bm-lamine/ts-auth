@@ -4,7 +4,7 @@ import {
   type TMagicLinkOptions,
   type TMagicLinkPayload,
 } from "app/models/magic-link.model";
-import Cache from "common/utils/cache";
+import { Cache } from "common/utils/cache";
 import { UNAUTHORIZED } from "common/utils/errors";
 import { nanoid } from "nanoid";
 import { HashService } from "./hash.service";
@@ -26,7 +26,7 @@ export namespace MagicLinkService {
       ipHash: ipAddress ? HashService.hashIP(ipAddress) : undefined,
     } satisfies TMagicLinkPayload);
 
-    await Cache.client.setex(
+    await Cache.redis.setex(
       INTENT_KEY(HashService.hashToken(token)),
       INTENT_TTL,
       json,
@@ -42,7 +42,7 @@ export namespace MagicLinkService {
   }: TMagicLinkConsumeOptions): Promise<string> {
     const key = INTENT_KEY(HashService.hashToken(token));
 
-    const raw = await Cache.client.getdel(key);
+    const raw = await Cache.redis.getdel(key);
     if (!raw) {
       throw new UNAUTHORIZED("Invalid or expired magic link");
     }

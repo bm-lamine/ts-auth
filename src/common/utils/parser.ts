@@ -10,13 +10,13 @@ export default function parser<
 >(target: Target, schema: T) {
   return zValidator(target, schema, (result, ctx) => {
     if (!result.success) {
+      const issues = result.error.issues.map((i) => ({
+        path: i.path,
+        message: i.message,
+      }));
+
       return ctx.json(
-        ErrorFactory.from(
-          result.error.issues.map((i) => ({
-            path: i.path,
-            message: i.message,
-          })),
-        ).toJSON(),
+        ErrorFactory.from(issues).toJSON(),
         STATUS_CODE.UNPROCESSABLE_ENTITY,
       );
     }

@@ -39,12 +39,12 @@ This checklist tracks what is required to make the magic-link authentication flo
 ## 🔑 Authentication Session Issuance
 
 - [x] Decide auth strategy:
-  - [ ] HTTP-only session cookies
+  - [_] HTTP-only session cookies
   - [x] JWT (access + refresh)
 
 - [x] Issue session/JWT after successful callback
 - [x] Attach auth state to Hono context
-- [ ] Ensure cookies are `HttpOnly`, `Secure`, `SameSite`
+- [_] Ensure cookies are `HttpOnly`, `Secure`, `SameSite`
 
 ---
 
