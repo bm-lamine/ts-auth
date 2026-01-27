@@ -72,7 +72,9 @@ export namespace JwtService {
     return { accessToken, refreshToken };
   }
 
-  export async function revoke(userId: string, token: string) {
-    await Cache.client.srem(USER_SID(userId), HashService.hashToken(token));
+  export async function revoke(userId: string, token?: string) {
+    if (token)
+      await Cache.client.srem(USER_SID(userId), HashService.hashToken(token));
+    else await Cache.client.del(USER_SID(userId));
   }
 }

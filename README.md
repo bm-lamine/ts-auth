@@ -18,32 +18,32 @@ This checklist tracks what is required to make the magic-link authentication flo
 
 ## 🔐 Token Security
 
-- [ ] Generate cryptographically secure random tokens (≥128 bits)
-- [ ] Hash tokens before storage (SHA-256 or better)
-- [ ] Store only hashed tokens in Redis / DB
-- [ ] Set short expiration (5–15 minutes)
-- [ ] Ensure tokens are single-use
-- [ ] Atomically invalidate token on consume
-- [ ] Reject expired or already-used tokens
+- [x] Generate cryptographically secure random tokens (≥128 bits)
+- [x] Hash tokens before storage (SHA-256 or better)
+- [x] Store only hashed tokens in Redis / DB
+- [x] Set short expiration (5–15 minutes)
+- [x] Ensure tokens are single-use
+- [x] Atomically invalidate token on consume
+- [x] Reject expired or already-used tokens
 
 ---
 
 ## 🧠 Token Context Binding (Recommended)
 
-- [ ] Bind token to user-agent hash
-- [ ] Optionally bind token to IP hash
-- [ ] Reject token if context mismatch
+- [x] Bind token to user-agent hash
+- [x] Optionally bind token to IP hash
+- [x] Reject token if context mismatch
 
 ---
 
 ## 🔑 Authentication Session Issuance
 
-- [ ] Decide auth strategy:
+- [x] Decide auth strategy:
   - [ ] HTTP-only session cookies
-  - [ ] JWT (access + refresh)
+  - [x] JWT (access + refresh)
 
-- [ ] Issue session/JWT after successful callback
-- [ ] Attach auth state to Hono context
+- [x] Issue session/JWT after successful callback
+- [x] Attach auth state to Hono context
 - [ ] Ensure cookies are `HttpOnly`, `Secure`, `SameSite`
 
 ---

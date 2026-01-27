@@ -16,7 +16,7 @@ export namespace UserService {
     return user;
   }
 
-  export async function toJSON(user: TUser) {
+  export function toJSON(user: TUser) {
     return UserModel.json.parse(user);
   }
 }
