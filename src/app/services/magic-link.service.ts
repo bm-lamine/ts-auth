@@ -6,11 +6,12 @@ import {
 } from "app/models/magic-link.model";
 import { Cache } from "common/utils/cache";
 import { UNAUTHORIZED } from "common/utils/errors";
+import { TTL } from "lib/constants";
 import { nanoid } from "nanoid";
 import { HashService } from "./hash.service";
 
 export namespace MagicLinkService {
-  export const INTENT_TTL = 5 * 60;
+  export const INTENT_TTL = TTL["5m"];
   export const INTENT_KEY = (hash: string) => `auth:intent:${hash}`;
 
   export async function generate({

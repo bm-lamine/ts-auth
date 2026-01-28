@@ -6,6 +6,7 @@ import { AccountService } from "app/services/account.service";
 import { JwtService } from "app/services/jwt.service";
 import { MagicLinkService } from "app/services/magic-link.service";
 import { UserService } from "app/services/user.service";
+import { INTERNAL_SERVER_ERROR, NOT_FOUND } from "common/utils/errors";
 import parser from "common/utils/parser";
 import { Hono } from "hono";
 import type { JwtVariables } from "hono/jwt";
@@ -13,9 +14,9 @@ import { isProd } from "lib/constants";
 import ErrorFactory from "lib/error-factory";
 import { STATUS_CODE } from "lib/status-code";
 
-export const authRouter = new Hono();
+const router = new Hono();
 
-authRouter.route(
+router.route(
   "/magic-link",
   new Hono()
     .post("/intent", parser("json", MagicLinkModel.intentJson), async (ctx) => {
@@ -40,6 +41,7 @@ authRouter.route(
 
         const email = await MagicLinkService.consume({ token, userAgent });
         const user = await UserService.findOrCreate({ email, userAgent });
+        if (!user) throw new INTERNAL_SERVER_ERROR();
 
         return ctx.json({
           tokens: await JwtService.authenticate(user.id),
@@ -49,7 +51,7 @@ authRouter.route(
     ),
 );
 
-authRouter.route(
+router.route(
   "/tokens",
   new Hono<{ Variables: JwtVariables<TPayload> }>()
     .post("/refresh", parser("json", AuthModel.refreshJson), async (ctx) => {
@@ -71,9 +73,20 @@ authRouter.route(
     ),
 );
 
-authRouter.route(
+router.route(
   "/account",
   new Hono<{ Variables: JwtVariables<TPayload> }>()
+    .get("/", jwtMiddleware, async (ctx) => {
+      const payload = ctx.get("jwtPayload");
+
+      const account = await AccountService.findByUserId(payload.sub);
+      if (!account) throw new NOT_FOUND();
+
+      return ctx.json({
+        account: AccountService.toResponse(account),
+        message: "account found successfully",
+      });
+    })
     .post(
       "/",
       jwtMiddleware,
@@ -94,6 +107,8 @@ authRouter.route(
           userId: payload.sub,
           username: json.username,
         });
+
+        if (!newAccount) throw new INTERNAL_SERVER_ERROR();
 
         return ctx.json({
           account: AccountService.toResponse(newAccount),
@@ -128,6 +143,7 @@ authRouter.route(
         }
 
         const updated = await AccountService.update(payload.sub, json);
+        if (!updated) throw new INTERNAL_SERVER_ERROR();
 
         return ctx.json({
           account: AccountService.toResponse(updated),
@@ -136,3 +152,5 @@ authRouter.route(
       },
     ),
 );
+
+export default router;

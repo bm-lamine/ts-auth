@@ -1,9 +1,11 @@
 import { schema } from "common/db";
 import * as model from "drizzle-zod";
-import type z from "zod";
+import z from "zod";
 
 export namespace AccountModel {
-  export const select = model.createSelectSchema(schema.accounts);
+  export const select = model.createSelectSchema(schema.accounts, {
+    userId: z.nanoid(),
+  });
 
   export const insert = model
     .createInsertSchema(schema.accounts)
