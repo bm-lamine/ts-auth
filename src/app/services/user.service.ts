@@ -1,26 +1,14 @@
 import { UserModel, type TInsertUser, type TUser } from "app/models/user.model";
+import { CacheService } from "app/services/cache.service";
 import { db, schema } from "common/db";
-import { Cache } from "common/utils/cache";
 import { forget } from "common/utils/forget";
 import { eq } from "drizzle-orm";
-import { TTL } from "lib/constants";
 
 export namespace UserService {
-  export const KEYS = {
-    USERS: "auth:users",
-    USER_EMAIL: (email: string) => `auth:user:email:${email}`,
-    USER_ID: (id: string) => `auth:user:id:${id}`,
-  } as const;
-
-  export const TTLS = {
-    USER: TTL["5m"],
-    USERS: TTL["7d"],
-  } as const;
-
   export async function findByEmail(email: string) {
-    const key = KEYS.USER_EMAIL(email);
-    const cache = await Cache.get(key, UserModel.select);
-    if (cache) return cache;
+    const key = CacheService.KEYS.USER_EMAIL(email);
+    const cached = await CacheService.get(key, UserModel.select);
+    if (cached) return cached;
 
     const [user] = await db
       .select()
@@ -45,17 +33,21 @@ export namespace UserService {
     const user = await create(values);
     if (!user) return null;
 
-    forget(cacheOne(user));
+    forget(CacheServiceOne(user));
     return user;
   }
 
-  export async function cacheOne(user: TUser) {
+  export async function CacheServiceOne(user: TUser) {
     const json = JSON.stringify(user);
-    await Cache.redis
+    await CacheService.redis
       .multi()
-      .setex(KEYS.USER_ID(user.id), TTLS.USER, json)
-      .setex(KEYS.USER_EMAIL(user.email), TTLS.USER, json)
-      .del(KEYS.USERS)
+      .setex(CacheService.KEYS.USER_ID(user.id), CacheService.TTLS.USER, json)
+      .setex(
+        CacheService.KEYS.USER_EMAIL(user.email),
+        CacheService.TTLS.USER,
+        json,
+      )
+      .del(CacheService.KEYS.USERS)
       .exec();
   }
 }

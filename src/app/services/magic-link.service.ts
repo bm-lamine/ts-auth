@@ -4,16 +4,12 @@ import {
   type TMagicLinkOptions,
   type TMagicLinkPayload,
 } from "app/models/magic-link.model";
-import { Cache } from "common/utils/cache";
+import { CacheService } from "app/services/cache.service";
 import { UNAUTHORIZED } from "common/utils/errors";
-import { TTL } from "lib/constants";
 import { nanoid } from "nanoid";
 import { HashService } from "./hash.service";
 
 export namespace MagicLinkService {
-  export const INTENT_TTL = TTL["5m"];
-  export const INTENT_KEY = (hash: string) => `auth:intent:${hash}`;
-
   export async function generate({
     email,
     userAgent,
@@ -27,9 +23,9 @@ export namespace MagicLinkService {
       ipHash: ipAddress ? HashService.hashIP(ipAddress) : undefined,
     } satisfies TMagicLinkPayload);
 
-    await Cache.redis.setex(
-      INTENT_KEY(HashService.hashToken(token)),
-      INTENT_TTL,
+    await CacheService.redis.setex(
+      CacheService.KEYS.INTENT_HASH(HashService.hashToken(token)),
+      CacheService.TTLS.INTENT_HASH,
       json,
     );
 
@@ -41,9 +37,9 @@ export namespace MagicLinkService {
     userAgent,
     ipAddress,
   }: TMagicLinkConsumeOptions): Promise<string> {
-    const key = INTENT_KEY(HashService.hashToken(token));
+    const key = CacheService.KEYS.INTENT_HASH(HashService.hashToken(token));
+    const raw = await CacheService.redis.getdel(key);
 
-    const raw = await Cache.redis.getdel(key);
     if (!raw) {
       throw new UNAUTHORIZED("Invalid or expired magic link");
     }

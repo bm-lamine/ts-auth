@@ -4,28 +4,17 @@ import {
   type TInsertAccount,
   type TUpdateAccount,
 } from "app/models/account.model";
+import { CacheService } from "app/services/cache.service";
 import { db, schema } from "common/db";
-import { Cache } from "common/utils/cache";
 import { forget } from "common/utils/forget";
 import { eq } from "drizzle-orm";
-import { TTL } from "lib/constants";
+
 export namespace AccountService {
-  export const KEYS = {
-    ACCOUNTS: "auth:accounts",
-    ACCOUNT_USERNAME: (username: string) => `auth:account:username:${username}`,
-    ACCOUNT_USERID: (userId: string) => `auth:account:userId:${userId}`,
-  } as const;
-
-  export const TTLS = {
-    ACCOUNT: TTL["5m"],
-    ACCOUNTS: TTL["7d"],
-  } as const;
-
   export const query = db.select().from(schema.accounts).$dynamic();
 
   export async function findByUsername(username: string) {
-    const key = KEYS.ACCOUNT_USERNAME(username);
-    const cache = await Cache.get(key, AccountModel.select);
+    const key = CacheService.KEYS.ACCOUNT_USERNAME(username);
+    const cache = await CacheService.get(key, AccountModel.select);
     if (cache) return cache;
 
     const [stored] = await query
@@ -36,8 +25,8 @@ export namespace AccountService {
   }
 
   export async function findByUserId(userId: string) {
-    const key = KEYS.ACCOUNT_USERID(userId);
-    const cache = await Cache.get(key, AccountModel.select);
+    const key = CacheService.KEYS.ACCOUNT_USERID(userId);
+    const cache = await CacheService.get(key, AccountModel.select);
     if (cache) return cache;
 
     const [account] = await query
@@ -66,11 +55,19 @@ export namespace AccountService {
 
   export async function cacheOne(account: TAccount) {
     const json = JSON.stringify(account);
-    await Cache.redis
+    await CacheService.redis
       .multi()
-      .setex(KEYS.ACCOUNT_USERID(account.userId), TTLS.ACCOUNT, json)
-      .setex(KEYS.ACCOUNT_USERNAME(account.username), TTLS.ACCOUNT, json)
-      .del(KEYS.ACCOUNTS)
+      .setex(
+        CacheService.KEYS.ACCOUNT_USERID(account.userId),
+        CacheService.TTLS.ACCOUNT,
+        json,
+      )
+      .setex(
+        CacheService.KEYS.ACCOUNT_USERNAME(account.username),
+        CacheService.TTLS.ACCOUNT,
+        json,
+      )
+      .del(CacheService.KEYS.ACCOUNTS)
       .exec();
   }
 

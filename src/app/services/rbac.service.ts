@@ -4,7 +4,7 @@ import {
   type TUserRules,
 } from "app/models/user.model";
 import { db, schema } from "common/db";
-import { Cache } from "common/utils/cache";
+import { CacheService } from "app/services/cache.service";
 import { forget } from "common/utils/forget";
 import { eq } from "drizzle-orm";
 
@@ -12,7 +12,7 @@ export namespace RBAC {
   export async function getDbPermissions(userId: string) {
     const rows = await db
       .select({
-        slug: schema.permissions.slug,
+        rule: schema.permissions.rule,
         isSuperAdmin: schema.roles.isSuperAdmin,
       })
       .from(schema.usersRoles)
@@ -32,13 +32,13 @@ export namespace RBAC {
 
     return {
       isSuperAdmin: rows.some((r) => r.isSuperAdmin),
-      permissions: rows.map((r) => r.slug).filter(Boolean),
+      rules: rows.map((r) => r.rule).filter(Boolean),
     };
   }
 
   export async function getCachedPermissions(userId: string) {
-    const key = Cache.KEYS.USER_PERMISSIONS(userId);
-    return await Cache.get(key, UserModel.rules);
+    const key = CacheService.KEYS.USER_PERMISSIONS(userId);
+    return await CacheService.get(key, UserModel.rules);
   }
 
   export async function getPermissions(userId: string) {
@@ -52,9 +52,9 @@ export namespace RBAC {
 
   export function cachePermissions(userId: string, data: TUserRules) {
     forget(
-      Cache.redis.setex(
-        Cache.KEYS.USER_PERMISSIONS(userId),
-        Cache.TTLS.USER_PERMISSIONS,
+      CacheService.redis.setex(
+        CacheService.KEYS.USER_PERMISSIONS(userId),
+        CacheService.TTLS.USER_PERMISSIONS,
         JSON.stringify(data),
       ),
     );
