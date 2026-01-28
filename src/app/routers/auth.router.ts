@@ -1,4 +1,5 @@
-import jwtMiddleware from "app/middlewares/jwt.middleware";
+import requireAuth from "app/middlewares/auth.middleware";
+import requirePermission from "app/middlewares/rbac.middleware";
 import { AccountModel } from "app/models/account.model";
 import { AuthModel, type TPayload } from "app/models/auth.model";
 import { MagicLinkModel } from "app/models/magic-link.model";
@@ -62,7 +63,7 @@ router.route(
     })
     .post(
       "/revoke",
-      jwtMiddleware,
+      requireAuth,
       parser("json", AuthModel.refreshJson),
       async (ctx) => {
         const { refreshToken } = ctx.req.valid("json");
@@ -76,7 +77,7 @@ router.route(
 router.route(
   "/account",
   new Hono<{ Variables: JwtVariables<TPayload> }>()
-    .get("/", jwtMiddleware, async (ctx) => {
+    .get("/", requireAuth, async (ctx) => {
       const payload = ctx.get("jwtPayload");
 
       const account = await AccountService.findByUserId(payload.sub);
@@ -89,7 +90,7 @@ router.route(
     })
     .post(
       "/",
-      jwtMiddleware,
+      requireAuth,
       parser("json", AccountModel.insert.omit({ userId: true })),
       async (ctx) => {
         const json = ctx.req.valid("json");
@@ -118,7 +119,8 @@ router.route(
     )
     .patch(
       "/",
-      jwtMiddleware,
+      requireAuth,
+      requirePermission("account.update"),
       parser("json", AccountModel.update),
       async (ctx) => {
         const json = ctx.req.valid("json");

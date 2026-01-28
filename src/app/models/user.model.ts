@@ -11,7 +11,16 @@ export namespace UserModel {
   export const insert = model
     .createInsertSchema(schema.users, { email: z.email() })
     .omit({ id: true });
+
+  export const rules = z.object({
+    permissions: z.array(z.string().nullable()).default([]),
+    isSuperAdmin: z.boolean().default(false),
+  });
+
+  export const auth = select.pick({ id: true }).extend(rules.shape);
 }
 
 export type TUser = z.infer<typeof UserModel.select>;
 export type TInsertUser = z.infer<typeof UserModel.insert>;
+export type TUserRules = z.infer<typeof UserModel.rules>;
+export type TAuthUser = z.infer<typeof UserModel.auth>;
