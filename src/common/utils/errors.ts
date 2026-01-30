@@ -24,3 +24,11 @@ export class UNAUTHORIZED extends HTTPException {
     });
   }
 }
+
+export class FORBIDDEN extends HTTPException {
+  constructor() {
+    super(STATUS_CODE.FORBIDDEN, {
+      message: "forbidden",
+    });
+  }
+}
