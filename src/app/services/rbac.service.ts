@@ -1,25 +1,29 @@
 import {
-  UserModel,
-  type TAuthUser,
-  type TUserRules,
-} from "app/models/user.model";
-import { db, schema } from "common/db";
+  PermissionModel,
+  type TPermissionCache,
+  type TPermissionScope,
+} from "app/models/permission.model";
+import { UserModel, type TAuthUser, type TRole } from "app/models/user.model";
 import { CacheService } from "app/services/cache.service";
+import { db, schema } from "common/db";
 import { forget } from "common/utils/forget";
 import { eq } from "drizzle-orm";
 
 export namespace RBAC {
-  export async function getDbPermissions(userId: string) {
+  export async function getDbPermissions(userId: string): Promise<{
+    isSuperAdmin: boolean;
+    permissions: Array<TPermissionCache>;
+  }> {
     const rows = await db
       .select({
-        rule: schema.permissions.rule,
         isSuperAdmin: schema.roles.isSuperAdmin,
+        permission: {
+          rule: schema.permissions.rule,
+          scope: schema.permissions.scope,
+        },
       })
       .from(schema.usersRoles)
-      .innerJoin(
-        schema.roles,
-        eq(schema.rolesPermission.roleId, schema.roles.id),
-      )
+      .innerJoin(schema.roles, eq(schema.usersRoles.roleId, schema.roles.id))
       .leftJoin(
         schema.rolesPermission,
         eq(schema.roles.id, schema.rolesPermission.roleId),
@@ -32,13 +36,13 @@ export namespace RBAC {
 
     return {
       isSuperAdmin: rows.some((r) => r.isSuperAdmin),
-      rules: rows.map((r) => r.rule).filter(Boolean),
+      permissions: rows.map((r) => r.permission).filter((p) => p !== null),
     };
   }
 
   export async function getCachedPermissions(userId: string) {
     const key = CacheService.KEYS.USER_PERMISSIONS(userId);
-    return await CacheService.get(key, UserModel.rules);
+    return await CacheService.get(key, UserModel.role);
   }
 
   export async function getPermissions(userId: string) {
@@ -50,7 +54,7 @@ export namespace RBAC {
     return fresh;
   }
 
-  export function cachePermissions(userId: string, data: TUserRules) {
+  export function cachePermissions(userId: string, data: TRole) {
     forget(
       CacheService.redis.setex(
         CacheService.KEYS.USER_PERMISSIONS(userId),
@@ -60,8 +64,16 @@ export namespace RBAC {
     );
   }
 
-  export function can(user: TAuthUser, permission: string) {
+  export function can(
+    user: TAuthUser,
+    rule: string,
+    scope: TPermissionScope = "global",
+  ) {
     if (user.isSuperAdmin) return true;
-    return user.permissions.includes(permission);
+    const requiredLevel = PermissionModel.scopeLevel[scope];
+    return user.permissions.some((p) => {
+      if (p.rule !== rule) return false;
+      return PermissionModel.scopeLevel[p.scope] >= requiredLevel;
+    });
   }
 }
