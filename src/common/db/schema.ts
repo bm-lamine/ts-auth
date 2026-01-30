@@ -1,7 +1,13 @@
-import { foreignKey, index, pgSchema, primaryKey } from "drizzle-orm/pg-core";
+import * as core from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 
-export const auth = pgSchema("auth");
+export const auth = core.pgSchema("auth");
+
+export const PERMISSION_SCOPE = auth.enum("permission_scope", [
+  "self", //* Act only on resource they own,
+  "project", //* Act only resource within shared context
+  "global", //* Act on any resource, system-wide
+]);
 
 export const users = auth.table(
   "users",
@@ -18,7 +24,7 @@ export const users = auth.table(
       .timestamp({ withTimezone: true, mode: "date" })
       .$onUpdateFn(() => new Date()),
   }),
-  (t) => [index("usr_email_idx").on(t.email)],
+  (t) => [core.index("usr_email_idx").on(t.email)],
 );
 
 export const accounts = auth.table(
@@ -35,9 +41,9 @@ export const accounts = auth.table(
       .$onUpdateFn(() => new Date()),
   }),
   (t) => [
-    foreignKey({ columns: [t.userId], foreignColumns: [users.id] }),
-    index("acc_userId_idx").on(t.userId),
-    index("acc_username_idx").on(t.username),
+    core.foreignKey({ columns: [t.userId], foreignColumns: [users.id] }),
+    core.index("acc_userId_idx").on(t.userId),
+    core.index("acc_username_idx").on(t.username),
   ],
 );
 
@@ -55,27 +61,15 @@ export const roles = auth.table("roles", (c) => ({
     .$onUpdateFn(() => new Date()),
 }));
 
-export const permissions = auth.table("permissions", (c) => ({
-  id: c.varchar().primaryKey().$defaultFn(nanoid),
-  name: c.varchar().notNull(),
-  // rule is domain.action, ex: account.update
-  rule: c.varchar().notNull().unique(),
-  scope: c.varchar({ enum: ["self", "project", "global"] }),
-  description: c.varchar().notNull(),
-  createdAt: c
-    .timestamp({ withTimezone: true, mode: "date" })
-    .$defaultFn(() => new Date())
-    .notNull(),
-  updatedAt: c
-    .timestamp({ withTimezone: true, mode: "date" })
-    .$onUpdateFn(() => new Date()),
-}));
-
-export const usersRoles = auth.table(
-  "users_roles",
+export const permissions = auth.table(
+  "permissions",
   (c) => ({
-    userId: c.varchar().notNull(),
-    roleId: c.varchar().notNull(),
+    id: c.varchar().primaryKey().$defaultFn(nanoid),
+    name: c.varchar().notNull(),
+    // rule is domain.action, ex: account.update
+    rule: c.varchar().notNull(),
+    scope: PERMISSION_SCOPE().notNull().default("global"),
+    description: c.varchar().notNull(),
     createdAt: c
       .timestamp({ withTimezone: true, mode: "date" })
       .$defaultFn(() => new Date())
@@ -84,10 +78,19 @@ export const usersRoles = auth.table(
       .timestamp({ withTimezone: true, mode: "date" })
       .$onUpdateFn(() => new Date()),
   }),
+  (t) => [core.uniqueIndex("permission_unique_idx").on(t.rule, t.scope)],
+);
+
+export const usersRoles = auth.table(
+  "users_roles",
+  (c) => ({
+    userId: c.varchar().notNull(),
+    roleId: c.varchar().notNull(),
+  }),
   (t) => [
-    primaryKey({ columns: [t.userId, t.roleId] }),
-    foreignKey({ columns: [t.userId], foreignColumns: [users.id] }),
-    foreignKey({ columns: [t.roleId], foreignColumns: [roles.id] }),
+    core.primaryKey({ columns: [t.userId, t.roleId] }),
+    core.foreignKey({ columns: [t.userId], foreignColumns: [users.id] }),
+    core.foreignKey({ columns: [t.roleId], foreignColumns: [roles.id] }),
   ],
 );
 
@@ -96,17 +99,13 @@ export const rolesPermission = auth.table(
   (c) => ({
     roleId: c.varchar().notNull(),
     permissionId: c.varchar().notNull(),
-    createdAt: c
-      .timestamp({ withTimezone: true, mode: "date" })
-      .$defaultFn(() => new Date())
-      .notNull(),
-    updatedAt: c
-      .timestamp({ withTimezone: true, mode: "date" })
-      .$onUpdateFn(() => new Date()),
   }),
   (t) => [
-    primaryKey({ columns: [t.permissionId, t.roleId] }),
-    foreignKey({ columns: [t.roleId], foreignColumns: [roles.id] }),
-    foreignKey({ columns: [t.permissionId], foreignColumns: [permissions.id] }),
+    core.primaryKey({ columns: [t.permissionId, t.roleId] }),
+    core.foreignKey({ columns: [t.roleId], foreignColumns: [roles.id] }),
+    core.foreignKey({
+      columns: [t.permissionId],
+      foreignColumns: [permissions.id],
+    }),
   ],
 );
