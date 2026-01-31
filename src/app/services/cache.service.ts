@@ -8,19 +8,19 @@ export namespace CacheService {
 
   export const KEYS = {
     USERS: "auth:users",
-    ACCOUNTS: "auth:accounts",
+    PROFILES: "auth:profiles",
     USER_ID: (id: string) => `auth:user:id:${id}`,
     USER_EMAIL: (email: string) => `auth:user:email:${email}`,
-    ACCOUNT_USERNAME: (username: string) => `auth:account:username:${username}`,
-    ACCOUNT_USERID: (userId: string) => `auth:account:userId:${userId}`,
+    PROFILE_USERNAME: (username: string) => `auth:profile:username:${username}`,
+    PROFILE_USERID: (userId: string) => `auth:profile:userId:${userId}`,
     INTENT_HASH: (hash: string) => `auth:intent:${hash}`,
     USER_SID: (userId: string) => `auth:sid:${userId}`,
     USER_PERMISSIONS: (userId: string) => `auth:user:permissions:${userId}`,
   } as const;
 
   export const TTLS = {
-    ACCOUNT: TTL["5m"],
-    ACCOUNTS: TTL["7d"],
+    PROFILE: TTL["5m"],
+    PROFILES: TTL["7d"],
     USER_PERMISSIONS: TTL["1d"],
     ACCESS: TTL["5m"],
     REFRESH: TTL["7d"],

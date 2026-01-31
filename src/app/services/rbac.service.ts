@@ -70,10 +70,10 @@ export namespace RBAC {
     scope: TPermissionScope = "global",
   ) {
     if (user.isSuperAdmin) return true;
-    const requiredLevel = PermissionModel.scopeLevel[scope];
+    const requiredLevel = PermissionModel.scope.levels[scope];
     return user.permissions.some((p) => {
       if (p.rule !== rule) return false;
-      return PermissionModel.scopeLevel[p.scope] >= requiredLevel;
+      return PermissionModel.scope.levels[p.scope] >= requiredLevel;
     });
   }
 }

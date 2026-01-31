@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import accountRouter from "./account.router";
 import magicLinkRouter from "./magic-link.router";
+import profileRouter from "./profile.router";
 import tokensRouter from "./tokens.router";
 
 const router = new Hono();
@@ -8,6 +8,6 @@ const router = new Hono();
 router
   .route("/magic-link", magicLinkRouter)
   .route("/tokens", tokensRouter)
-  .route("/account", accountRouter);
+  .route("/profile", profileRouter);
 
 export default router;

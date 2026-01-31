@@ -27,8 +27,8 @@ export const users = auth.table(
   (t) => [core.index("usr_email_idx").on(t.email)],
 );
 
-export const accounts = auth.table(
-  "accounts",
+export const profiles = auth.table(
+  "profiles",
   (c) => ({
     userId: c.varchar().primaryKey(),
     username: c.varchar().notNull().unique(),
